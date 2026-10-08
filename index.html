@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VAHIKA — Farm to Fork Traceability Application</title>
+  <meta name="description" content="Vahika farm-to-fork IoT traceability dashboard for cold-chain shipment monitoring.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- Leaflet Local with CDN Fallback -->
+  <link rel="stylesheet" href="leaflet.css"
+    onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';">
+  <script src="leaflet.js"></script>
+  <script>
+    if (typeof L === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-main: #060a12;
+      --bg-sidebar: #090e18;
+      --surface: #0c1322;
+      --surface-hover: #121b2f;
+      --surface-card: #0b1220;
+      --border: #162035;
+      --border-light: #202d47;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --green: #10b981;
+      --green-bright: #34d399;
+      --green-light: rgba(16, 185, 129, 0.15);
+      --red: #ef4444;
+      --red-light: rgba(239, 68, 68, 0.15);
+      --amber: #f59e0b;
+      --amber-light: rgba(245, 158, 11, 0.15);
+      --purple: #a855f7;
+      --radius-sm: 6px;
+      --radius: 10px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      line-height: 1.45;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ═══ TOP NAVBAR ═══ */
+    .top-navbar {
+      height: 60px;
+      background: #080d19;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-leaf {
+      width: 28px;
+      height: 28px;
+      color: var(--green-bright);
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .brand-sub {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+      margin-top: 2px;
+    }
+
+    .menu-toggle {
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      margin-left: 6px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .nav-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .nav-meta-chips {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-left: 12px;
+    }
+
+    .meta-chip {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-chip b {
+      color: #f1f5f9;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .live-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--green-bright);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.6px;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+      transition: all 0.3s;
+    }
+
+    .live-badge.off {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #f87171;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+    }
+
+    .live-badge.sync {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+    }
+
+    .live-pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: live-blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes live-blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .clock-widget {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.15;
+    }
+
+    .clock-time {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .clock-date {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      color: #f1f5f9;
+      background: var(--surface-hover);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-left: 6px;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1e293b;
+      border: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .user-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .user-role {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* ═══ STATE TRANSITION BANNERS ═══ */
+    .banner {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      letter-spacing: 0.4px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-bottom: 1px solid transparent;
+    }
+
+    .banner.show {
+      display: flex;
+    }
+
+    .banner.off-b {
+      background: #3b0716;
+      color: #fecdd3;
+      border-color: #881337;
+    }
+
+    .banner.sync-b {
+      background: #381a04;
+      color: #fef3c7;
+      border-color: #78350f;
+    }
+
+    .banner.ok-b {
+      background: #022c22;
+      color: #a7f3d0;
+      border-color: #064e3b;
+    }
+
+    .spin {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: sp 0.7s linear infinite;
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ═══ MAIN APP WRAPPER ═══ */
+    .app-layout {
+      display: flex;
+      flex: 1;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* ═══ SIDEBAR ═══ */
+    .sidebar {
+      width: 180px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      padding: 16px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      color: #f1f5f9;
+      background: var(--surface-hover);
+    }
+
+    .nav-item.active {
+      background: #1d4ed8;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(29, 78, 216, 0.4);
+    }
+
+    .nav-item svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+
+    /* ═══ MAIN CONTENT AREA ═══ */
+    .main-content {
+      flex: 1;
+      padding: 18px 22px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ═══ CARD BASE ═══ */
+    .dash-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .card-link {
+      font-size: 11px;
+      font-weight: 600;
+      color: #38bdf8;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .card-link:hover {
+      text-decoration: underline;
+    }
+
+    /* ═══ SECTION 1: TOP ROW (MAP + STATUS + INTEGRITY) ═══ */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.65fr 0.55fr;
+      gap: 16px;
+    }
+
+    /* Map Card */
+    .map-card {
+      position: relative;
+      height: 380px;
+    }
+
+    .map-card-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #090e1b;
+    }
+
+    .map-title-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .pill-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--green-bright);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.4px;
+    }
+
+    .coords-text {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .map-viewport-wrapper {
+      position: relative;
+      flex: 1;
+      background: #030712;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #030712;
+      outline: none;
+    }
+
+    .recenter-pill-btn {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      z-index: 500;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border-light);
+      color: #e2e8f0;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s;
+    }
+
+    .recenter-pill-btn:hover {
+      background: #1e293b;
+      color: #38bdf8;
+      border-color: #38bdf8;
+    }
+
+    /* Fixed Map Marker Styles */
+    .radar-target-marker {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radar-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.25);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+      animation: radar-wave 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes radar-wave {
+      0% {
+        transform: scale(0.4);
+        opacity: 1;
+      }
+
+      80%,
+      100% {
+        transform: scale(1.7);
+        opacity: 0;
+      }
+    }
+
+    .radar-core {
+      position: relative;
+      z-index: 2;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #0284c7;
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+    }
+
+    .map-custom-card-tip {
+      background: rgba(11, 18, 32, 0.92) !important;
+      backdrop-filter: blur(6px) !important;
+      border: 1px solid #1e2d4a !important;
+      border-radius: 8px !important;
+      padding: 8px 12px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7) !important;
+      font-family: 'Inter', sans-serif !important;
+      color: #f8fafc !important;
+      line-height: 1.35 !important;
+    }
+
+    .map-custom-card-tip::before {
+      border-top-color: #1e2d4a !important;
+    }
+
+    /* Map Controls */
+    .leaflet-bar {
+      border: 1px solid var(--border-light) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+      border-radius: 6px !important;
+      overflow: hidden;
+    }
+
+    .leaflet-bar a {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-bottom: 1px solid #1e293b !important;
+    }
+
+    .leaflet-bar a:hover {
+      background-color: #1e293b !important;
+      color: #38bdf8 !important;
+    }
+
+    .leaflet-control-attribution {
+      display: none !important;
+    }
+
+    /* Middle Column: Network & Sync + Offline Storage */
+    .mid-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .net-sync-card {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1.2;
+    }
+
+    .net-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .net-node-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .net-pulse-sphere {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.2);
+      border: 2px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+      transition: all 0.3s;
+    }
+
+    .net-pulse-sphere.off {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--red);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+    }
+
+    .net-pulse-sphere.sync {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--amber);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+    }
+
+    .net-pulse-sphere-inner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--green-bright);
+      transition: all 0.3s;
+    }
+
+    .net-pulse-sphere.off .net-pulse-sphere-inner {
+      background: var(--red);
+    }
+
+    .net-pulse-sphere.sync .net-pulse-sphere-inner {
+      background: var(--amber);
+    }
+
+    .net-status-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .net-title-badge {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green-bright);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      width: fit-content;
+      margin-bottom: 2px;
+    }
+
+    .net-sub-note {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .signal-box {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .signal-rate {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green-bright);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .signal-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* 4-Step Diagram */
+    .net-steps-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin-top: 14px;
+      padding: 0 6px;
+    }
+
+    .steps-connecting-line {
+      position: absolute;
+      top: 13px;
+      left: 20px;
+      right: 20px;
+      height: 2px;
+      background: var(--border);
+      z-index: 1;
+    }
+
+    .step-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+
+    .step-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #090e1b;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all 0.3s;
+    }
+
+    .step-node.active .step-circle {
+      background: var(--green);
+      border-color: var(--green);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+
+    .step-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-top: 5px;
+    }
+
+    .step-sub {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    /* Offline Storage Card */
+    .offline-storage-card {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 0.8;
+    }
+
+    .off-storage-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .storage-icon-wrap {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #111a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 18px;
+    }
+
+    .storage-info-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .storage-info-col span {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .storage-count-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .storage-count-val {
+      font-size: 20px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+    }
+
+    .storage-count-val.warn {
+      color: #f87171;
+    }
+
+    .storage-count-lbl {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .off-storage-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: right;
+    }
+
+    .storage-check-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .storage-status-note {
+      font-size: 11px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .storage-status-sub {
+      font-size: 10px;
+      color: var(--green-bright);
+    }
+
+    /* Right Column: Data Integrity Card */
+    .integrity-card {
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .integrity-rows {
+      padding: 8px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .int-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .int-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+
+    .int-icon-sq {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .int-item-right {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--green-bright);
+      text-shadow: 0 0 6px rgba(52, 211, 153, 0.3);
+    }
+
+    /* ═══ SECTION 2: MIDDLE SENSOR CARDS ROW ═══ */
+    .sensors-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+
+    .sensor-box {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px 10px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: var(--shadow);
+    }
+
+    .sensor-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .sensor-icon-and-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .s-icon-box {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .s-icon-box.temp {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+    }
+
+    .s-icon-box.hum {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+
+    .s-icon-box.gas {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .s-icon-box.mot {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+    }
+
+    .s-icon-box.bat {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .s-name {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .s-badge {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green-bright);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .s-badge.warn {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+
+    .s-val-row {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .s-val {
+      font-size: 23px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .s-unit {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .s-subtext {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 48px;
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+    }
+
+    .chart-y-axis {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      color: #475569;
+      padding-right: 5px;
+      line-height: 1;
+    }
+
+    .chart-canvas {
+      flex: 1;
+      height: 48px;
+    }
+
+    /* ═══ SECTION 3: BOTTOM ROW (TELEMETRY + EVENT LOG + JOURNEY) ═══ */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.65fr 0.65fr;
+      gap: 16px;
+    }
+
+    /* Records Table */
+    .table-card-body {
+      overflow-x: auto;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .telemetry-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .telemetry-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: #090e1a;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .telemetry-table td {
+      padding: 7px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #cbd5e1;
+      border-bottom: 1px solid #131c30;
+      white-space: nowrap;
+    }
+
+    .telemetry-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .telemetry-table tr.new-flash {
+      background: rgba(56, 189, 248, 0.14) !important;
+      transition: background 1.2s;
+    }
+
+    .status-synced {
+      color: var(--green-bright);
+      font-weight: 700;
+    }
+
+    .status-local {
+      color: #f87171;
+      font-weight: 700;
+    }
+
+    /* Network Event Log */
+    .event-log-list {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      overflow-y: auto;
+      max-height: 220px;
+    }
+
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      position: relative;
+    }
+
+    .event-node-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .event-node-dot.green {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .event-node-dot.blue {
+      background: #38bdf8;
+      box-shadow: 0 0 6px #38bdf8;
+    }
+
+    .event-node-dot.red {
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+    }
+
+    .event-node-dot.cyan {
+      background: #2dd4bf;
+      box-shadow: 0 0 6px #2dd4bf;
+    }
+
+    .event-node-dot.gray {
+      background: #64748b;
+    }
+
+    .event-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .event-row-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .event-time {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .event-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .event-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Supply Chain Journey */
+    .journey-timeline-card {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .journey-steps-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin: 10px 0;
+    }
+
+    .journey-track-line {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      height: 2px;
+      background: #1e293b;
+      z-index: 1;
+    }
+
+    .journey-track-progress {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      width: 35%;
+      height: 2px;
+      background: #38bdf8;
+      z-index: 1;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    .journey-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+
+    .j-icon-bubble {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #090e1b;
+      border: 2px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: all 0.3s;
+    }
+
+    .journey-node.done .j-icon-bubble {
+      border-color: var(--green);
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green-bright);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+
+    .journey-node.active .j-icon-bubble {
+      border-color: #38bdf8;
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
+    }
+
+    .j-step-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-top: 6px;
+    }
+
+    .j-step-loc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .j-step-time {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .journey-node.active .j-step-time {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    /* Responsive */
+    @media (max-width: 1280px) {
+      .top-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sensors-row {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══ TOP NAVBAR ═══ -->
+  <header class="top-navbar">
+    <div class="nav-left">
+      <div class="brand-group">
+        <svg class="brand-leaf" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A9.76 9.76 0 0 0 17 8z" />
+          <path
+            d="M20.29 2a13.38 13.38 0 0 0-3.8 2.2c-3.1 2.37-5 6.13-5 10.3 0 1.25.17 2.45.5 3.58 2.52-1.74 5.37-4.14 7.03-7.58 1.4-2.88 1.45-6.02 1.27-8.5z" />
+        </svg>
+        <div class="brand-text">
+          <div class="brand-name">VAHIKA</div>
+          <div class="brand-sub">Farm to Fork | Trusted Journey</div>
+        </div>
+        <div class="menu-toggle">≡</div>
+      </div>
+
+      <div class="nav-divider"></div>
+      <div class="nav-title">Traceability Application</div>
+
+      <div class="nav-meta-chips">
+        <div class="meta-chip">Shipment ID <b>SHP-2026-4781</b></div>
+        <div class="meta-chip">Device <b>VHK-NODE-032</b></div>
+        <div class="meta-chip">Product <b>Tomato</b></div>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <div class="live-badge" id="connBadge">
+        <span class="live-pulse-dot"></span>
+        <span id="connLabel">LIVE</span>
+      </div>
+
+      <div class="clock-widget">
+        <div class="clock-time" id="clockTime">15:03:37</div>
+        <div class="clock-date" id="clockDate">29 Sep 2026</div>
+      </div>
+
+      <button class="icon-btn" title="Notifications">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      </button>
+
+      <div class="user-profile">
+        <div class="user-avatar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          </svg>
+        </div>
+        <div class="user-info">
+          <div class="user-name">Admin</div>
+          <div class="user-role">Logistics Manager</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ STATE TRANSITION BANNERS ═══ -->
+  <div class="banner off-b" id="banOff">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+      <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+      <line x1="12" y1="20" x2="12.01" y2="20" />
+    </svg>
+    NETWORK OFFLINE — DATA STORED LOCALLY
+  </div>
+  <div class="banner sync-b" id="banSync"><span class="spin"></span><span id="banSyncTxt">SYNCING OFFLINE DATA...</span>
+  </div>
+  <div class="banner ok-b" id="banOk">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+    SYNC COMPLETE — ALL RECORDS VERIFIED
+  </div>
+
+  <!-- ═══ APP LAYOUT ═══ -->
+  <div class="app-layout">
+    <!-- ═══ LEFT SIDEBAR ═══ -->
+    <aside class="sidebar">
+      <a class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg>
+        <span>Live Tracking</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+        <span>Sensor Data</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        </svg>
+        <span>Shipments</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+        </svg>
+        <span>Traceability</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+        <span>Reports</span>
+      </a>
+      <a class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        <span>Settings</span>
+      </a>
+    </aside>
+
+    <!-- ═══ MAIN DASHBOARD CONTENT ═══ -->
+    <main class="main-content">
+
+      <!-- ═══ TOP GRID: MAP + STATUS + INTEGRITY ═══ -->
+      <div class="top-grid">
+        <!-- 1. MAP CARD -->
+        <div class="dash-card map-card">
+          <div class="map-card-header">
+            <div class="map-title-left">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2">
+                <path
+                  d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.93V17a1 1 0 0 1-2 0v-.07A7.003 7.003 0 0 1 4.07 11H5a1 1 0 0 1 0 2h-.93A7.003 7.003 0 0 1 11 4.07V5a1 1 0 0 1 2 0v-.93A7.003 7.003 0 0 1 19.93 11H19a1 1 0 0 1 0-2h.93A7.003 7.003 0 0 1 13 16.93z" />
+              </svg>
+              <span>Shipment Live Location</span>
+              <span class="pill-badge">GPS LOCKED</span>
+            </div>
+            <div class="coords-text">11.0168° N, 76.9558° E</div>
+          </div>
+
+          <div class="map-viewport-wrapper">
+            <div id="map"></div>
+            <button class="recenter-pill-btn" id="recenterBtn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              Recenter Map
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. MIDDLE STACK: NETWORK & SYNC + OFFLINE STORAGE -->
+        <div class="mid-stack">
+          <!-- Network & Sync Status -->
+          <div class="dash-card net-sync-card">
+            <div class="card-header" style="border:none;padding:0 0 8px 0;">
+              <div class="card-header-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
+                  <path d="M4.93 4.93a10 10 0 0 1 14.14 0" />
+                  <path d="M7.76 7.76a6 6 0 0 1 8.48 0" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+                <span>Network &amp; Sync Status</span>
+              </div>
+            </div>
+
+            <div class="net-top-row">
+              <div class="net-node-status">
+                <div class="net-pulse-sphere" id="netSphere">
+                  <div class="net-pulse-sphere-inner"></div>
+                </div>
+                <div class="net-status-text">
+                  <div class="net-title-badge" id="netBadgeTxt">ONLINE</div>
+                  <div class="net-sub-note" id="netSubNote">Connected to server</div>
+                </div>
+              </div>
+
+              <div class="signal-box">
+                <div class="signal-rate" id="sigRate">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.2.2-.2.51 0 .71.2.2.51.2.71 0l1.79-1.79C8.36 19.34 10.1 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 2c3.87 0 7 3.13 7 7 0 1.54-.5 2.97-1.35 4.13L15.3 13.8c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l2.35 2.35C15.79 17.5 13.98 18 12 18c-3.87 0-7-3.13-7-7s3.13-7 7-7z" />
+                  </svg>
+                  <span>4G</span>
+                </div>
+                <div class="signal-desc" id="sigDesc">Good Signal</div>
+              </div>
+            </div>
+
+            <!-- Steps line -->
+            <div class="net-steps-diagram">
+              <div class="steps-connecting-line"></div>
+              <div class="step-node active" id="stNode1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Sensing</div>
+                <div class="step-sub">Live Data</div>
+              </div>
+              <div class="step-node" id="stNode2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Transmitting</div>
+                <div class="step-sub">To Server</div>
+              </div>
+              <div class="step-node" id="stNode3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Storing</div>
+                <div class="step-sub">Local Backup</div>
+              </div>
+              <div class="step-node" id="stNode4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Verifying</div>
+                <div class="step-sub">On Blockchain</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Offline Storage Card -->
+          <div class="dash-card offline-storage-card">
+            <div class="off-storage-left">
+              <div class="storage-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                </svg>
+              </div>
+              <div class="storage-info-col">
+                <span>Offline Storage</span>
+                <div class="storage-count-row">
+                  <span class="storage-count-val" id="storagePendNum">0</span>
+                  <span class="storage-count-lbl">Pending Records</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="off-storage-right">
+              <div class="storage-check-icon" id="storageIconStatus">✓</div>
+              <div>
+                <div class="storage-status-note" id="storageNote">Auto sync when connected</div>
+                <div class="storage-status-sub" id="storageSub">All records synchronized</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. DATA INTEGRITY CARD -->
+        <div class="dash-card integrity-card">
+          <div class="card-header">
+            <div class="card-header-title">Data Integrity</div>
+            <span class="pill-badge" id="intOverallBadge">✓ Verified</span>
+          </div>
+
+          <div class="integrity-rows">
+            <div class="int-item">
+              <div class="int-item-left">
+                <div class="int-icon-sq">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                </div>
+                <span>Hash Chain</span>
+              </div>
+              <div class="int-item-right">Verified</div>
+            </div>
+
+            <div class="int-item">
+              <div class="int-item-left">
+                <div class="int-icon-sq">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                </div>
+                <span>Secure Signature</span>
+              </div>
+              <div class="int-item-right">Verified</div>
+            </div>
+
+            <div class="int-item">
+              <div class="int-item-left">
+                <div class="int-icon-sq">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  </svg>
+                </div>
+                <span>Local Records</span>
+              </div>
+              <div class="int-item-right">Safe</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION 2: MIDDLE SENSOR CARDS ROW ═══ -->
+      <div class="sensors-row">
+        <!-- 1. Temperature -->
+        <div class="sensor-box">
+          <div class="sensor-top">
+            <div class="sensor-icon-and-title">
+              <div class="s-icon-box temp">🌡️</div>
+              <span class="s-name">Temperature</span>
+            </div>
+            <span class="s-badge" id="stTempBadge">● Normal</span>
+          </div>
+          <div class="s-val-row">
+            <span class="s-val" id="valTemp">7.2</span>
+            <span class="s-unit">°C</span>
+          </div>
+          <div class="chart-container">
+            <div class="chart-y-axis"><span>12</span><span>6</span><span>0</span></div>
+            <canvas class="chart-canvas" id="canvasTemp" width="180" height="48"></canvas>
+          </div>
+        </div>
+
+        <!-- 2. Humidity -->
+        <div class="sensor-box">
+          <div class="sensor-top">
+            <div class="sensor-icon-and-title">
+              <div class="s-icon-box hum">💧</div>
+              <span class="s-name">Humidity</span>
+            </div>
+            <span class="s-badge" id="stHumBadge">● Normal</span>
+          </div>
+          <div class="s-val-row">
+            <span class="s-val" id="valHum">76.5</span>
+            <span class="s-unit">%</span>
+          </div>
+          <div class="chart-container">
+            <div class="chart-y-axis"><span>100</span><span>70</span><span>40</span></div>
+            <canvas class="chart-canvas" id="canvasHum" width="180" height="48"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. Gas / VOC -->
+        <div class="sensor-box">
+          <div class="sensor-top">
+            <div class="sensor-icon-and-title">
+              <div class="s-icon-box gas">🍃</div>
+              <span class="s-name">Gas / VOC</span>
+            </div>
+            <span class="s-badge" id="stGasBadge">● Normal</span>
+          </div>
+          <div class="s-val-row">
+            <span class="s-val" id="valGas">4.7</span>
+            <span class="s-unit">ppm</span>
+          </div>
+          <div class="chart-container">
+            <div class="chart-y-axis"><span>10</span><span>5</span><span>0</span></div>
+            <canvas class="chart-canvas" id="canvasGas" width="180" height="48"></canvas>
+          </div>
+        </div>
+
+        <!-- 4. Motion / Vibration -->
+        <div class="sensor-box">
+          <div class="sensor-top">
+            <div class="sensor-icon-and-title">
+              <div class="s-icon-box mot">〰️</div>
+              <span class="s-name">Motion / Vibration</span>
+            </div>
+            <span class="s-badge" id="stMotBadge">● Normal</span>
+          </div>
+          <div class="s-val-row">
+            <span class="s-val" id="valMot">0.67</span>
+            <span class="s-unit">m/s²</span>
+          </div>
+          <div class="chart-container">
+            <div class="chart-y-axis"><span>2</span><span>1</span><span>0</span></div>
+            <canvas class="chart-canvas" id="canvasMot" width="180" height="48"></canvas>
+          </div>
+        </div>
+
+        <!-- 5. Battery -->
+        <div class="sensor-box">
+          <div class="sensor-top">
+            <div class="sensor-icon-and-title">
+              <div class="s-icon-box bat">🔋</div>
+              <span class="s-name">Battery</span>
+            </div>
+            <span class="s-badge" id="stBatBadge">Good</span>
+          </div>
+          <div class="s-val-row">
+            <span class="s-val" id="valBat">84</span>
+            <span class="s-unit">%</span>
+            <span class="s-subtext" id="valBatSub">~18h remaining</span>
+          </div>
+          <div class="chart-container">
+            <div class="chart-y-axis"><span>100</span><span>50</span><span>0</span></div>
+            <canvas class="chart-canvas" id="canvasBat" width="180" height="48"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION 3: BOTTOM ROW (TELEMETRY + LOG + JOURNEY) ═══ -->
+      <div class="bottom-grid">
+        <!-- 1. Recent Telemetry Records Table -->
+        <div class="dash-card">
+          <div class="card-header">
+            <div class="card-header-title">
+              <span>📑 Recent Telemetry Records</span>
+            </div>
+            <a class="card-link">View All</a>
+          </div>
+          <div class="table-card-body">
+            <table class="telemetry-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Temperature (°C)</th>
+                  <th>Humidity (%)</th>
+                  <th>Gas (ppm)</th>
+                  <th>Motion (m/s²)</th>
+                  <th>Battery (%)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="telemetryTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. Network Event Log -->
+        <div class="dash-card">
+          <div class="card-header">
+            <div class="card-header-title">
+              <span>🚀 Network Event Log</span>
+            </div>
+            <a class="card-link">View All</a>
+          </div>
+          <div class="event-log-list" id="eventLogContainer">
+            <div class="event-item">
+              <div class="event-node-dot green"></div>
+              <div class="event-content">
+                <div class="event-row-top">
+                  <span class="event-time">15:03:12</span>
+                  <span class="event-title">Connection Restored</span>
+                </div>
+                <span class="event-desc">Syncing 12 offline records...</span>
+              </div>
+            </div>
+
+            <div class="event-item">
+              <div class="event-node-dot blue"></div>
+              <div class="event-content">
+                <div class="event-row-top">
+                  <span class="event-time">15:02:48</span>
+                  <span class="event-title">Sync Complete</span>
+                </div>
+                <span class="event-desc">12 records synchronized</span>
+              </div>
+            </div>
+
+            <div class="event-item">
+              <div class="event-node-dot red"></div>
+              <div class="event-content">
+                <div class="event-row-top">
+                  <span class="event-time">15:01:48</span>
+                  <span class="event-title">Network Offline</span>
+                </div>
+                <span class="event-desc">Storing data locally...</span>
+              </div>
+            </div>
+
+            <div class="event-item">
+              <div class="event-node-dot cyan"></div>
+              <div class="event-content">
+                <div class="event-row-top">
+                  <span class="event-time">15:01:48</span>
+                  <span class="event-title">Local Storage Active</span>
+                </div>
+                <span class="event-desc">Recording continues</span>
+              </div>
+            </div>
+
+            <div class="event-item">
+              <div class="event-node-dot gray"></div>
+              <div class="event-content">
+                <div class="event-row-top">
+                  <span class="event-time">15:00:12</span>
+                  <span class="event-title">Connected to Server</span>
+                </div>
+                <span class="event-desc">Live data transmission</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Supply Chain Journey -->
+        <div class="dash-card">
+          <div class="card-header">
+            <div class="card-header-title">
+              <span>📦 Supply Chain Journey</span>
+            </div>
+            <a class="card-link">View Details</a>
+          </div>
+          <div class="journey-timeline-card">
+            <div class="journey-steps-wrap">
+              <div class="journey-track-line"></div>
+              <div class="journey-track-progress"></div>
+
+              <div class="journey-node done">
+                <div class="j-icon-bubble">🍃</div>
+                <div class="j-step-title">Farm</div>
+                <div class="j-step-loc">Erode, TN</div>
+                <div class="j-step-time">29 Sep 08:20 AM</div>
+              </div>
+
+              <div class="journey-node active">
+                <div class="j-icon-bubble">🚛</div>
+                <div class="j-step-title">In Transit</div>
+                <div class="j-step-loc">NH544</div>
+                <div class="j-step-time">Ongoing</div>
+              </div>
+
+              <div class="journey-node">
+                <div class="j-icon-bubble">🏭</div>
+                <div class="j-step-title">Warehouse</div>
+                <div class="j-step-loc">Coimbatore</div>
+                <div class="j-step-time">Expected 29 Sep 06:00 PM</div>
+              </div>
+
+              <div class="journey-node">
+                <div class="j-icon-bubble">🏪</div>
+                <div class="j-step-title">Retailer</div>
+                <div class="j-step-loc">Chennai</div>
+                <div class="j-step-time">Expected 30 Sep 10:00 AM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ═══ JAVASCRIPT LOGIC ═══ -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ═══════════════════════  MAP INITIALIZATION (SATELLITE HYBRID)  ═══════════════════════ */
+      var map;
+      var FIXED_POS = [11.0168, 76.9558]; // Fixed Location (Coimbatore/NH544 Corridor)
+
+      function initMap() {
+        if (typeof L === 'undefined') {
+          setTimeout(initMap, 200);
+          return;
+        }
+
+        try {
+          map = L.map('map', {
+            center: [11.03, 76.98],
+            zoom: 10,
+            zoomControl: false,
+            scrollWheelZoom: false,
+            attributionControl: false
+          });
+
+          L.control.zoom({ position: 'topright' }).addTo(map);
+
+          // Satellite Imagery (Esri World Imagery)
+          var satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18,
+            attribution: 'Esri, Maxar, Earthstar'
+          }).addTo(map);
+
+          // Reference Labels on top of satellite
+          var labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18
+          }).addTo(map);
+
+          // Fallback to CARTO Dark Matter if network fails
+          satLayer.on('tileerror', function () {
+            console.warn('Satellite tile fallback to CARTO Dark');
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=cb1_42xg_1_e2b4364eb26e61797aa5400a', {
+              subdomains: 'abcd', maxZoom: 19
+            }).addTo(map);
+          });
+
+          // Fixed Vehicle Marker with radar pulse
+          var markerIcon = L.divIcon({
+            className: '',
+            html: '<div class="radar-target-marker"><div class="radar-ring"></div><div class="radar-core"></div></div>',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+          });
+
+          var marker = L.marker(FIXED_POS, { icon: markerIcon, zIndexOffset: 1000 }).addTo(map);
+
+          // Permanent Custom Tooltip Card
+          marker.bindTooltip(
+            '<div style="font-weight:700;font-size:12px;color:#f8fafc;margin-bottom:2px;">VHK-NODE-032</div>' +
+            '<div style="font-size:10.5px;color:#94a3b8;">NH544 Corridor</div>' +
+            '<div style="font-size:10.5px;color:#94a3b8;">Coimbatore, TN</div>' +
+            '<div style="font-size:9.5px;color:#38bdf8;font-family:monospace;margin-top:2px;">11.0168° N, 76.9558° E</div>',
+            {
+              permanent: true,
+              direction: 'top',
+              offset: [0, -16],
+              className: 'map-custom-card-tip'
+            }
+          );
+
+          // Recenter button
+          document.getElementById('recenterBtn').addEventListener('click', function () {
+            map.setView(FIXED_POS, 10);
+          });
+
+          setTimeout(function () { map.invalidateSize(); }, 200);
+          setTimeo      /* ═══════════════════════  TELEMETRY & SENSORS (API DRIVEN)  ═══════════════════════ */
+      var S = {
+        temp: { h: [], base: 7.2, r: 0.6, lo: 4, hi: 10, color: '#38bdf8' },
+        hum: { h: [], base: 76.5, r: 1.5, lo: 65, hi: 88, color: '#2dd4bf' },
+        gas: { h: [], base: 4.7, r: 0.8, lo: 2, hi: 8, color: '#c084fc' },
+        mot: { h: [], base: 0.67, r: 0.2, lo: 0.2, hi: 1.5, color: '#fb923c' },
+        bat: { h: [], base: 84, r: 0.05, lo: 10, hi: 100, color: '#eab308' }
+      };
+
+      var batt = 84;
+      var mode = 'online';
+
+      function pad2(n) { return n < 10 ? '0' + n : n; }
+
+      function getClockStr(d) {
+        return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+      }
+
+      function getDateStr(d) {
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+      }
+
+      function updateClock() {
+        var now = new Date();
+        var elTime = document.getElementById('clockTime');
+        var elDate = document.getElementById('clockDate');
+        if(elTime) elTime.textContent = getClockStr(now);
+        if(elDate) elDate.textContent = getDateStr(now);
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      /* ── Canvas Wave Chart with Gradient ── */
+      function drawWave(canvasId, data, color, lo, hi) {
+        var cv = document.getElementById(canvasId);
+        if (!cv) return;
+        var ctx = cv.getContext('2d');
+        var w = cv.width, h = cv.height;
+        ctx.clearRect(0, 0, w, h);
+
+        var pts = data.slice(-18);
+        if (pts.length < 2) return;
+        var dx = w / (pts.length - 1);
+        var rng = (hi - lo) || 1;
+
+        // Fill gradient
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        pts.forEach(function (v, i) {
+          var y = h - ((v - lo) / rng) * (h - 6) - 3;
+          ctx.lineTo(i * dx, y);
+        });
+        ctx.lineTo((pts.length - 1) * dx, h);
+        ctx.closePath();
+        ctx.fillStyle = color + '22';
+        ctx.fill();
+
+        // Stroke
+        ctx.beginPath();
+        pts.forEach(function (v, i) {
+          var y = h - ((v - lo) / rng) * (h - 6) - 3;
+          if (i === 0) ctx.moveTo(0, y);
+          else ctx.lineTo(i * dx, y);
+        });
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.2;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        // Endpoint dot
+        var lastY = h - ((pts[pts.length - 1] - lo) / rng) * (h - 6) - 3;
+        ctx.beginPath();
+        ctx.arc((pts.length - 1) * dx, lastY, 2.5, 0, 6.28);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      /* ── Fetch Real Data ── */
+      async function fetchData() {
+        try {
+          const res = await fetch('/api/telemetry/recent');
+          const data = await res.json();
+          
+          if (!data || data.length === 0) return;
+
+          // Process the historical points for charts (oldest to newest)
+          S.temp.h = data.map(d => d.temperature);
+          S.hum.h = data.map(d => d.humidity);
+          S.gas.h = data.map(d => d.gasVoc);
+          S.mot.h = data.map(d => d.motion);
+          S.bat.h = data.map(d => d.batteryLevel);
+
+          // Get latest reading
+          const latest = data[data.length - 1];
+          
+          document.getElementById('valTemp').textContent = latest.temperature.toFixed(1);
+          document.getElementById('valHum').textContent = latest.humidity.toFixed(1);
+          document.getElementById('valGas').textContent = latest.gasVoc.toFixed(1);
+          document.getElementById('valMot').textContent = latest.motion.toFixed(2);
+          document.getElementById('valBat').textContent = Math.round(latest.batteryLevel);
+
+          drawWave('canvasTemp', S.temp.h, S.temp.color, S.temp.lo, S.temp.hi);
+          drawWave('canvasHum', S.hum.h, S.hum.color, S.hum.lo, S.hum.hi);
+          drawWave('canvasGas', S.gas.h, S.gas.color, S.gas.lo, S.gas.hi);
+          drawWave('canvasMot', S.mot.h, S.mot.color, S.mot.lo, S.mot.hi);
+          drawWave('canvasBat', S.bat.h, S.bat.color, S.bat.lo, S.bat.hi);
+
+          // Update Telemetry Table
+          var tbody = document.getElementById('telemetryTbody');
+          tbody.innerHTML = ''; // Clear table
+          
+          // Latest first for table
+          const tableData = [...data].reverse().slice(0, 8);
+          
+          tableData.forEach(row => {
+             var tr = document.createElement('tr');
+             const dt = new Date(row.timestamp);
+             tr.innerHTML =
+                '<td>' + getClockStr(dt) + '</td>' +
+                '<td>' + row.temperature.toFixed(1) + '</td>' +
+                '<td>' + row.humidity.toFixed(1) + '</td>' +
+                '<td>' + row.gasVoc.toFixed(1) + '</td>' +
+                '<td>' + row.motion.toFixed(2) + '</td>' +
+                '<td>' + Math.round(row.batteryLevel) + '</td>' +
+                '<td><span class="status-synced">SYNCED</span></td>';
+             tbody.appendChild(tr);
+          });
+          
+        } catch (e) {
+          console.error('API Error:', e);
+        }
+      }
+
+      // Start simulator for development purposes
+      fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enable: true })
+      }).catch(console.error);
+
+      // Poll API every 3s
+      setInterval(fetchData, 3000);
+      fetchData(); // Initial load
+    })();
+  </script>
+  
+  <!-- DEV SIMULATION BADGE -->
+  <div style="position:fixed;bottom:10px;right:10px;background:#b91c1c;color:white;padding:4px 10px;font-size:11px;border-radius:4px;z-index:9999;font-weight:bold;box-shadow:0 2px 10px rgba(0,0,0,0.5);">
+    DEVELOPMENT SIMULATION ACTIVE
+  </div>
+</body>
+</html>
